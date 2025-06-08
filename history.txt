@@ -1,0 +1,9 @@
+download ham10000 dataset from kaggle
+duplicate the same dataset into two seperated directories, binary model directory and multiclass model directory
+seperate dataset into different classes in both diretories
+balance dataset by removing images from large classes in binary model directory
+mixed the normal classes and the abnormal class to have only two class, normal and abnormal for the binary model in the binary model directory
+	before: abnormal 1954 image
+		normal 8051 image
+	after:  abnormal 1954 image
+		normal 1955 image

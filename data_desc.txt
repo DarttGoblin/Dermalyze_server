@@ -1,0 +1,7 @@
+nv     -> Melanocytic nevi                -> Normal
+bkl    -> Benign keratosis-like lesions   -> Normal
+vas    -> Vascular lesions                -> Normal
+df     -> Dermatofibroma                  -> Normal
+mel    -> Melanoma                        -> Abnormal
+bcc    -> Basal cell carcinoma            -> Abnormal
+akiec  -> Actinic keratoses               -> Abnormal

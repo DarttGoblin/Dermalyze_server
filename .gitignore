@@ -1,0 +1,6 @@
+.other_files/
+binary_classifier/binary_data/abnormal/
+binary_classifier/binary_data/normal/
+multi_classifier/multiclass_data/akiec/
+multi_classifier/multiclass_data/bcc/
+multi_classifier/multiclass_data/mel/
