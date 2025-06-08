@@ -7,3 +7,5 @@ mixed the normal classes and the abnormal class to have only two class, normal a
 		normal 8051 image
 	after:  abnormal 1954 image
 		normal 1955 image
+let the cancerous class without balancing
+trained both models
