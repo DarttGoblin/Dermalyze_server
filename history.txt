@@ -9,3 +9,4 @@ mixed the normal classes and the abnormal class to have only two class, normal a
 		normal 1955 image
 let the cancerous class without balancing
 trained both models
+downloaded the full pack of the models and not just .keras or .h5 due the tensorflow versions incompatibility
