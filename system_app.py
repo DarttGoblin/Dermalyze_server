@@ -17,8 +17,14 @@ multiclass_model = tf.saved_model.load('models/multiclass_skin_classifier').sign
 binary_classes = ['normal', 'abnormal']
 multi_classes = ['akiec', 'bcc', 'mel']
 
-loc_categories = ['back', 'lower extremity', 'trunk', 'upper extremity', 'abdomen', 'face', 
-                  'chest', 'foot', 'neck', 'scalp', 'hand', 'ear', 'genital', 'acral']
+# Binary model localization categories (original)
+binary_loc_categories = ['back', 'lower extremity', 'trunk', 'upper extremity', 'abdomen', 'face', 
+                         'chest', 'foot', 'neck', 'scalp', 'hand', 'ear', 'genital', 'acral']
+
+# Multiclass model localization categories (fixed to match working test)
+multi_loc_categories = ['abdomen', 'back', 'chest', 'ear', 'face', 'foot',
+                        'hand', 'lower extremity', 'neck', 'scalp', 'trunk',
+                        'upper extremity', 'unknown']
 
 @app.route('/predict', methods=['POST'])
 def predict_combined():
@@ -35,54 +41,70 @@ def predict_combined():
         sex = request.form.get('sex', '').lower()
         localization = request.form.get('localization', '').lower()
 
-        sex_map = {'female': 0, 'male': 1}
-        if sex not in sex_map:
-            return jsonify({'error': f'Invalid sex value: {sex}'}), 400
-        if localization not in loc_categories:
-            return jsonify({'error': f'Invalid localization value: {localization}'}), 400
-
         age_array = np.array([[age]], dtype=np.float32)
-        sex_array = np.array([[sex_map[sex]]], dtype=np.float32)
-        loc_vector = np.zeros((1, len(loc_categories)), dtype=np.float32)
-        loc_vector[0, loc_categories.index(localization)] = 1.0
+
+        # === BINARY MODEL PREDICTION ===
+        # Sex preprocessing for binary model (original way)
+        sex_map_binary = {'female': 0, 'male': 1}
+        if sex not in sex_map_binary:
+            return jsonify({'error': f'Invalid sex value: {sex}'}), 400
+        sex_array_binary = np.array([[sex_map_binary[sex]]], dtype=np.float32)
+
+        # Localization for binary model (original way)
+        if localization not in binary_loc_categories:
+            return jsonify({'error': f'Invalid localization value: {localization}'}), 400
+        binary_loc_vector = np.zeros((1, len(binary_loc_categories)), dtype=np.float32)
+        binary_loc_vector[0, binary_loc_categories.index(localization)] = 1.0
 
         # Predict with binary model
         binary_output = binary_model(
             keras_tensor=tf.constant(img_array),
             keras_tensor_1=tf.constant(age_array),
-            keras_tensor_2=tf.constant(sex_array),
-            keras_tensor_3=tf.constant(loc_vector)
+            keras_tensor_2=tf.constant(sex_array_binary),
+            keras_tensor_3=tf.constant(binary_loc_vector)
         )
 
-        # binary_preds = list(binary_output.values())[0].numpy()
-        # binary_index = int(np.argmax(binary_preds))
-        # binary_conf = float(binary_preds[0][binary_index])
-        # binary_label = binary_classes[binary_index]
         binary_preds = list(binary_output.values())[0].numpy()
         binary_conf = float(binary_preds[0][0])  # Confidence of 'abnormal'
         binary_label = 'abnormal' if binary_conf >= 0.5 else 'normal'
-        confidence = binary_conf if binary_label == 'abnormal' else 1.0 - binary_conf
 
         # If prediction is normal
         if binary_label == 'normal':
             return jsonify({
                 'abnormal': False,
                 'prediction': binary_label,
-                'confidence': binary_conf
+                'confidence': 1.0 - binary_conf  # Confidence of being normal
             })
 
-        # Else predict with multiclass model
+        # === MULTICLASS MODEL PREDICTION ===
+        # Sex preprocessing for multiclass model (with unknown support)
+        sex_map_multi = {'female': 0, 'male': 1, 'unknown': 2}
+        sex_array_multi = np.array([[sex_map_multi.get(sex, 2)]], dtype=np.float32)
+
+        # Localization for multiclass model (with unknown fallback)
+        multi_loc_vector = np.zeros((1, len(multi_loc_categories)), dtype=np.float32)
+        multi_index = multi_loc_categories.index(localization) if localization in multi_loc_categories else multi_loc_categories.index('unknown')
+        multi_loc_vector[0, multi_index] = 1.0
+
+        print("DEBUG MULTICLASS SHAPES →")
+        print("  img_array:", img_array.shape)
+        print("  age_array:", age_array.shape)
+        print("  sex_array_multi:", sex_array_multi.shape)
+        print("  multi_loc_vector:", multi_loc_vector.shape)
+        print("  localization used:", localization if localization in multi_loc_categories else 'unknown')
+
+        # Predict with multiclass model
         multi_output = multiclass_model(
             keras_tensor=tf.constant(img_array),
             keras_tensor_1=tf.constant(age_array),
-            keras_tensor_2=tf.constant(sex_array),
-            keras_tensor_3=tf.constant(loc_vector)
+            keras_tensor_2=tf.constant(sex_array_multi),
+            keras_tensor_3=tf.constant(multi_loc_vector)
         )
 
         multi_preds = list(multi_output.values())[0].numpy()
-        multi_index = int(np.argmax(multi_preds))
-        multi_conf = float(multi_preds[0][multi_index])
-        multi_label = multi_classes[multi_index]
+        multi_class_index = int(np.argmax(multi_preds))
+        multi_conf = float(multi_preds[0][multi_class_index])
+        multi_label = multi_classes[multi_class_index]
 
         return jsonify({
             'abnormal': True,
@@ -91,6 +113,7 @@ def predict_combined():
         })
 
     except Exception as e:
+        print("ERROR:", str(e))
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':

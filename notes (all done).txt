@@ -1,0 +1,8 @@
+plot result (done)
+weight decay for over fitting
+add labels to inputs
+pytorch instead of keras
+number of parameter * 4 = number of megabytes !remember
+7,184,897 parameters, include this in the presentation
+discussion: limitations -> future work, include 2 slides in the presentation
+page numbering! include this in the presentation
